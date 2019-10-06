@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchsummary import summary
+from loss.avg_dice_loss import AvgDiceLoss
 
 dropout_rate = 0.3
 num_organ = 8
@@ -209,13 +210,15 @@ if __name__ == "__main__":
     net = net.cuda()
     # summary(net, (1, 48, 256, 256))
 
-    data = torch.randn((1, 1, 48, 256, 256)).cuda()
+    ct = torch.randn((1, 1, 48, 256, 256)).cuda()
+    seg = torch.randn((1, 48, 256, 256)).cuda()
+    loss_func = AvgDiceLoss()
 
     with torch.no_grad():
-        out = net(data)
+        out1, out2 = net(ct)
+        loss = loss_func(out1, out2, seg)
+        print(loss.item())
 
-    for item in out:
-        print(item.size())
 
     # 计算参数个数
     count = .0
