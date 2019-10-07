@@ -7,23 +7,30 @@ from data_loader.data_loader import MyDataset
 from torch.utils.data import DataLoader
 from loss.avg_dice_loss import AvgDiceLoss
 from utils import accuracy
-# from val import sample_predict
+from val import dataset_accuracy
 
 # 超参数
-on_server = False
+on_server = True
+resume_training = True
+module_dir = './module/net10-0.953-0.575.pth'
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0' if on_server is False else '1,2,3'
 torch.backends.cudnn.benchmark = True
 Epoch = 3000
 leaing_rate = 1e-4
 
-batch_size = 1 if on_server is False else 3
-num_workers = 1 if on_server is False else 2
-pin_memory = False if on_server is False else True
+batch_size = 3 if on_server else 1
+num_workers = 2 if on_server else 1
+pin_memory = True if on_server else False
 
 # 模型
 net = get_net(training=True)
 net = torch.nn.DataParallel(net).cuda() if on_server else net.cuda()
+if resume_training:
+    print('----------resume training-----------')
+    net.load_state_dict(torch.load(module_dir))
+    net.train()
+
 
 # 数据
 train_ds = MyDataset('csv_files/train_info.csv')
@@ -69,12 +76,16 @@ for epoch in range(Epoch):
 
     mean_loss = sum(mean_loss) / len(mean_loss)
     mean_acc = sum(mean_acc) / len(mean_acc)
-    # 每个epoch，计算验证集的accuracy
-
-
-
 
     # 每十个个epoch保存一次模型参数
-    # 网络模型的命名方式为：epoch轮数+当前minibatch的loss+本轮epoch的平均loss
-    if epoch % 10 is 0:
-        torch.save(net.state_dict(), './module/net{}-{:.3f}-{:.3f}.pth'.format(epoch, loss.item(), mean_loss))
+    # 网络模型的命名方式为：epoch轮数+本轮epoch的平均loss+本轮epoch的平均acc
+    if epoch % 5 is 0:
+        # 验证集accuracy
+        val_acc = dataset_accuracy(net, 'csv_files/val_info.csv')
+        print('------------------------')
+        print('epoch:%d - train loss:%.3f, train accuracy:%.3f, validation accuracy:%.3f, time:%.3f min' %
+              (epoch, mean_loss, mean_acc, val_acc, (time() - start) / 60))
+        print(' '.join([]))
+        print('------------------------')
+
+        torch.save(net.state_dict(), './module/net{}-{:.3f}-{:.3f}.pth'.format(epoch, mean_loss, mean_acc))

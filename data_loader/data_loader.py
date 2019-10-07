@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import os
 import csv
 import random
+import numpy as np
 
 sample_path = r'D:\Projects\OrgansSegment\Data\Sample'
 image_path = os.path.join(sample_path, 'image')

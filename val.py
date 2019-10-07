@@ -3,6 +3,7 @@ import SimpleITK as sitk
 import torch
 import numpy as np
 import csv
+from utils import accuracy
 
 sample_path = r'D:\Projects\OrgansSegment\Data\Sample'
 image_path = os.path.join(sample_path, 'image')
@@ -49,13 +50,13 @@ def sample_predict(net, ct_path):
             output = net(ct_tensor)
             output = output.squeeze()  # (9, 48, 256, 256)
 
-            outputs_list.append(output.cpu().detached().numpy())
+            outputs_list.append(output.cpu().detach().numpy())
             del output
 
     # 拼接
-    pred_seg = np.concatenate(outputs_list[0:-1], axis=1)
+    pred_seg = np.concatenate(outputs_list[0:-1], axis=1)  # (9, D, 256, 256)
     if cut_flag:
-        pred_seg = np.concatenate([pred_seg, outputs_list[-1][:, -count, :, :]], axis=1)
+        pred_seg = np.concatenate([pred_seg, outputs_list[-1][:, -count:, :, :]], axis=1)
     else:
         pred_seg = np.concatenate([pred_seg, outputs_list[-1]], axis=1)
 
@@ -65,13 +66,22 @@ def sample_predict(net, ct_path):
 def dataset_accuracy(net, csv_path):
     file = open(csv_path, 'r')
     lines = csv.reader(file)
+    mean_acc = []
     for line in lines:
         seg_path = os.path.join(label_path, line[2])
         ct_path = os.path.join(image_path, line[2].replace('label', 'image'))
 
         pred_seg = sample_predict(net, ct_path)
+        pred_seg = np.expand_dims(pred_seg, axis=0)  # (1, 9, D, 256, 256)
+
         target = sitk.ReadImage(seg_path)
         target_array = sitk.GetArrayFromImage(target)
+        target_array = np.expand_dims(target_array, axis=0)  # (1, D, 256, 256)
+
+        _, acc = accuracy(pred_seg, target_array)
+        mean_acc.append(acc)
+
+    return np.mean(mean_acc)
 
 
 
