@@ -211,7 +211,7 @@ if __name__ == "__main__":
     # summary(net, (1, 48, 256, 256))
 
     ct = torch.randn((1, 1, 48, 256, 256)).cuda()
-    seg = torch.randn((1, 48, 256, 256)).cuda()
+    seg = torch.randint(0, 9, (1, 48, 256, 256)).cuda()
     loss_func = AvgDiceLoss()
 
     with torch.no_grad():

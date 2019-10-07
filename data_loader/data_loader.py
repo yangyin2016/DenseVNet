@@ -129,7 +129,7 @@ if __name__ == "__main__":
     train_ds = MyDataset('D:/Projects/OrgansSegment/Data/data_preprocess/train_info.csv')
 
     # 测试代码
-    train_dl = DataLoader(train_ds, 6, True)
+    train_dl = DataLoader(train_ds, 3, True)
     for index, (ct, seg) in enumerate(train_dl):
 
         print(index, ct.size(), seg.size())
