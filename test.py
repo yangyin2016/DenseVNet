@@ -33,7 +33,7 @@ def produceRandomlyDeformedImage(sitkImage, sitklabel, numcontrolpoints, stdDef)
 
 
 
-image = sitk.ReadImage(r'D:\Projects\OrgansSegment\Data\Sample\image\image0000.nii')
+image = sitk.ReadImage(r'D:\Projects\OrgansSegment\Data\Sample\image\image0000.nii.gz')
 label = sitk.ReadImage(r'D:\Projects\OrgansSegment\Data\Sample\label\label0000.nii')
 print(image.GetDimension())
 produceRandomlyDeformedImage(image, label, 4, 5)
