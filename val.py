@@ -22,7 +22,7 @@ file = open('./csv_files/prediction.csv', 'w')
 csv_writer = csv.writer(file)
 csv_writer.writerow([' ']+organs_name)
 
-model_dir = './module/net90-0.797-0.644.pth'
+model_dir = './module/net885--0.673-0.749.pth'
 
 def sample_predict(net, ct_path):
     """
@@ -128,7 +128,10 @@ def dataset_accuracy(net, csv_path, save=False):
         orgs_acc.append(accs)
         mean_acc.append(acc)
 
-    return np.mean(orgs_acc, axis=0), np.mean(mean_acc)
+    orgs_acc = np.array(orgs_acc)
+    org_mean = [np.mean(np.array(list(set(orgs_acc[:, i]).difference(['None'])), dtype=np.float16))
+                for i in range(len(organs_name))]
+    return org_mean, np.mean(mean_acc)
 
 
 
@@ -141,11 +144,4 @@ if __name__ == "__main__":
 
     test_org_acc, test_mean_acc = dataset_accuracy(net, 'csv_files/test_info.csv', save=True)
     print(' '.join(["%s:%.3f" % (i, j) for i, j in zip(organs_name, test_org_acc)]))
-
-
-
-
-
-
-
 

@@ -16,12 +16,16 @@ def accuracy(output, target):
     for idx, organ_idx in enumerate(organs_index):
         pred_temp = (prediction == (idx+1)) + .0
         target_temp = (target == organ_idx) + .0
-        dice = 2 * np.sum(pred_temp * target_temp, axis=(1, 2, 3)) / \
-                           (np.sum(pred_temp**2, axis=(1, 2, 3))
-                            + np.sum(target_temp**2, axis=(1, 2, 3)) + 1e-5)
-        organs_dice.append(np.mean(dice))
+        # target中不含该organ
+        if (target_temp==0).all():
+            organs_dice.append('None')
+        else:
+            dice = 2 * np.sum(pred_temp * target_temp, axis=(1, 2, 3)) / \
+                               (np.sum(pred_temp**2, axis=(1, 2, 3))
+                                + np.sum(target_temp**2, axis=(1, 2, 3)) + 1e-5)
+            organs_dice.append(np.mean(dice))
 
-    return organs_dice, np.mean(organs_dice)
+    return organs_dice, np.mean(list(set(organs_dice).difference(['None'])))
 
 
 if __name__ == "__main__":

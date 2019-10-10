@@ -3,9 +3,9 @@ import torch.nn as nn
 
 organs_index = [1, 3, 4, 5, 6, 7, 11, 14]
 num_organ = len(organs_index) # 8
+organ_weight = [1.0, 2.0, 4.0, 5.0, 1.0, 1.0, 2.0, 3.0]
 
-
-class AvgDiceLoss(nn.Module):
+class WgtDiceLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -28,10 +28,12 @@ class AvgDiceLoss(nn.Module):
         dice_stage1 = 0.0
         for idx in range(1, num_organ+1):
             pred_temp = pred_stage1[:, idx, :, :, :]
+            pred_temp = 0.9-torch.relu(0.9-pred_temp)
             target_temp = organs_target[:, idx - 1, :, :, :]
-            dice_stage1 += (2 * torch.sum(pred_temp * target_temp, [1, 2, 3]) + 1e-6) / \
+            org_dice = organ_weight[idx-1] * (2 * torch.sum(pred_temp * target_temp, [1, 2, 3]) + 1e-6) / \
                            (torch.sum(pred_temp.pow(2), [1, 2, 3])
                             + torch.sum(target_temp.pow(2), [1, 2, 3]) + 1e-6)
+            dice_stage1 += org_dice
 
         dice_stage1 /= num_organ
 
@@ -39,10 +41,12 @@ class AvgDiceLoss(nn.Module):
         dice_stage2 = 0.0
         for idx in range(1, num_organ+1):
             pred_temp = pred_stage2[:, idx, :, :, :]
+            pred_temp = 0.9-torch.relu(0.9-pred_temp)
             target_temp = organs_target[:, idx - 1, :, :, :]
-            dice_stage2 += 2 * torch.sum(pred_temp * target_temp, [1, 2, 3]) / \
+            org_dice = organ_weight[idx-1] * 2 * torch.sum(pred_temp * target_temp, [1, 2, 3]) / \
                            (torch.sum(pred_temp.pow(2), [1, 2, 3])
                             + torch.sum(target_temp.pow(2), [1, 2, 3]) + 1e-5)
+            dice_stage2 += org_dice
 
         dice_stage2 /= num_organ
 
