@@ -3,7 +3,7 @@ import SimpleITK as sitk
 import torch
 import numpy as np
 import csv
-from utils import accuracy
+from utils import accuracy, post_process
 from model.vnet import get_net
 import scipy.ndimage as ndimage
 
@@ -26,10 +26,10 @@ model_dir = './module/net885--0.673-0.749.pth'
 
 def sample_predict(net, ct_path):
     """
-    predict sample segmentation
+    predict the segmentation of one sample
     :param net: model
     :param ct_path: sample after downsample
-    :return: segmentation array (D, 256, 256)
+    :return: segmentation array (9, D, 256, 256)
     """
     net.eval()
     ct = sitk.ReadImage(ct_path)
@@ -103,7 +103,7 @@ def save_seg(pred_seg, info, accs):
 
 
 
-def dataset_accuracy(net, csv_path, save=False):
+def dataset_accuracy(net, csv_path, save=False, postprocess=False):
     file = open(csv_path, 'r')
     lines = csv.reader(file)
     mean_acc = []
@@ -111,8 +111,11 @@ def dataset_accuracy(net, csv_path, save=False):
     for line in lines:
         seg_path = os.path.join(label_path, "label%04d.nii" % int(line[0]))
         ct_path = os.path.join(image_path, "image%04d.nii" % int(line[0]))
+        print(ct_path + "\n--------------------------")
 
-        pred_seg = sample_predict(net, ct_path)
+        pred_seg = sample_predict(net, ct_path)  # （9, D, 256, 256)
+        if postprocess:
+            pred_seg = post_process(pred_seg)
 
         pred_seg = np.expand_dims(pred_seg, axis=0)  # (1, 9, D, 256, 256)
 
@@ -142,6 +145,6 @@ if __name__ == "__main__":
     net.load_state_dict(torch.load(model_dir))
     net.eval()
 
-    test_org_acc, test_mean_acc = dataset_accuracy(net, 'csv_files/test_info.csv', save=True)
+    test_org_acc, test_mean_acc = dataset_accuracy(net, 'csv_files/test_info.csv', save=True, postprocess=True)
     print(' '.join(["%s:%.3f" % (i, j) for i, j in zip(organs_name, test_org_acc)]))
 
