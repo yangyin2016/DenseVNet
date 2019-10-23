@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchsummary import summary
-from loss.avg_dice_loss import AvgDiceLoss
+from loss.dyn_wgt_dice_loss import DynWgtDiceLoss
 
 dropout_rate = 0.3
 num_organ = 8
@@ -14,7 +13,7 @@ class VNet(nn.Module):
         :param inchannel: 网络最开始的输入通道数量
         :param stage: 第一个VNet还是第二个VNet
         """
-        super().__init__()
+        super(VNet, self).__init__()
         self.training = training
         self.stage = stage
 
@@ -210,9 +209,9 @@ if __name__ == "__main__":
     net = net.cuda()
     # summary(net, (1, 48, 256, 256))
 
-    ct = torch.randn((1, 1, 48, 256, 256)).cuda()
-    seg = torch.randint(0, 9, (1, 48, 256, 256)).cuda()
-    loss_func = AvgDiceLoss()
+    ct = torch.randn((2, 1, 48, 256, 256)).cuda()
+    seg = torch.randint(0, 9, (2, 48, 256, 256)).cuda()
+    loss_func = DynWgtDiceLoss()
 
     with torch.no_grad():
         out1, out2 = net(ct)

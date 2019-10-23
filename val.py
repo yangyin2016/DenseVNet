@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import csv
 from utils import accuracy, post_process
-from model.vnet import get_net
+from model.cas_vnet import get_net
 import scipy.ndimage as ndimage
 
 organs_name = ['spleen', 'left kidney', 'gallbladder', 'esophagus',
@@ -22,7 +22,7 @@ file = open('./csv_files/prediction.csv', 'w')
 csv_writer = csv.writer(file)
 csv_writer.writerow([' ']+organs_name)
 
-model_dir = './module/net885--0.673-0.749.pth'
+model_dir = './module/net755-0.259-0.634.pth'
 
 def sample_predict(net, ct_path):
     """
@@ -102,7 +102,6 @@ def save_seg(pred_seg, info, accs):
     csv_writer.writerow([dataset+'-'+label]+accs)
 
 
-
 def dataset_accuracy(net, csv_path, save=False, postprocess=False):
     file = open(csv_path, 'r')
     lines = csv.reader(file)
@@ -111,7 +110,6 @@ def dataset_accuracy(net, csv_path, save=False, postprocess=False):
     for line in lines:
         seg_path = os.path.join(label_path, "label%04d.nii" % int(line[0]))
         ct_path = os.path.join(image_path, "image%04d.nii" % int(line[0]))
-        print(ct_path + "\n--------------------------")
 
         pred_seg = sample_predict(net, ct_path)  # （9, D, 256, 256)
         if postprocess:

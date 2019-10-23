@@ -3,6 +3,8 @@ import numpy as np
 from skimage import measure
 
 organs_index = [1, 3, 4, 5, 6, 7, 11, 14]
+organs_name = ['spleen', 'left kidney', 'gallbladder', 'esophagus',
+               'liver', 'stomach', 'pancreas', 'duodenum']
 num_organ = len(organs_index)  # 8
 
 orgs_size = {1: 246174.52222222224, 3: 161109.5842696629, 4: 25727.5, 5: 12812.022471910112,
@@ -40,8 +42,10 @@ def post_process(input):
     """
     pred_seg = np.argmax(input, axis=0)  # (D, 256, 256)
     output = np.zeros(input.shape)
-    for id in range(input.shape[0]):
+    for id in range(1, input.shape[0]):
         org_seg = (pred_seg == id) + .0
+        if (org_seg == .0).all():
+            continue
         labels, num = measure.label(org_seg, return_num=True)
         regions = measure.regionprops(labels)
         regions_area = [regions[i].area for i in range(num)]
@@ -51,6 +55,7 @@ def post_process(input):
         output[id, :, :, :] = org_seg
 
     return output
+
 
 
 if __name__ == "__main__":

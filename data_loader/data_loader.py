@@ -22,7 +22,7 @@ sample_slices = 48  # 48*256*256 for a sample
 lower = -350
 
 
-def produceRandomlyDeformedImage(sitkImage, sitklabel, numcontrolpoints, stdDef):
+def produceRandomlyDeformedImage(sitkImage, sitkLabel, numcontrolpoints, stdDef):
     transfromDomainMeshSize=[numcontrolpoints]*sitkImage.GetDimension()
 
     tx = sitk.BSplineTransformInitializer(sitkImage, transfromDomainMeshSize)
@@ -46,11 +46,9 @@ def produceRandomlyDeformedImage(sitkImage, sitklabel, numcontrolpoints, stdDef)
     outimgsitk = resampler.Execute(sitkImage)
 
     resampler.SetInterpolator(sitk.sitkNearestNeighbor)
-    outlabsitk = resampler.Execute(sitklabel)
+    outlabsitk = resampler.Execute(sitkLabel)
 
-    # save
-    sitk.WriteImage(outimgsitk, r'D:/image-test.nii')
-    sitk.WriteImage(outlabsitk, r'D:/label-test.nii')
+    return sitk.GetArrayFromImage(outimgsitk), sitk.GetArrayFromImage(outlabsitk)
 
 
 class MyDataset(Dataset):
@@ -75,32 +73,38 @@ class MyDataset(Dataset):
         img_array = sitk.GetArrayFromImage(image)
         lbl_array = sitk.GetArrayFromImage(label)
 
-        # 随机采样连续的48张slices
-        start_slice = random.randint(0, img_array.shape[0] - sample_slices)
-        end_slice = start_slice + sample_slices - 1
-        img_array = img_array[start_slice:end_slice+1, :, :]
-        lbl_array = lbl_array[start_slice:end_slice+1, :, :]
-
         # 数据增强
         if self.is_training:
+            # 以0.5概率进行B样条形变
+            bspline = False
+            if random.uniform(0, 1) >= 0.7:
+                img_array, lbl_array = produceRandomlyDeformedImage(image, label, 2, random.uniform(5, 15))
+                bspline = True
             # 以0.5的概率在5度的范围内随机旋转
             # 角度为负数是顺时针旋转，角度为正数是逆时针旋转
-            if random.uniform(0, 1) >= 0.5:
+            if random.uniform(0, 1) >= 0.6:
                 angle = random.uniform(-5, 5)
                 img_array = ndimage.rotate(img_array, angle, axes=(1, 2), reshape=False, cval=lower)
                 lbl_array = ndimage.rotate(lbl_array, angle, axes=(1, 2), reshape=False, cval=0)
 
             # 有0.5的概率不进行任何修修改，剩下0.5随机挑选0.8-0.5大小的patch放大到256*256
-            if random.uniform(0, 1) >= 0.5:
+            if random.uniform(0, 1) >= 0.7:
                 img_array, lbl_array = self.zoom(img_array, lbl_array, patch_size=random.uniform(0.5, 0.8))
 
+        # 随机采样连续的48张slices
+        if (not bspline) or img_array.shape[0] < sample_slices+4:
+            start_slice = random.randint(0, img_array.shape[0] - sample_slices)
+        else:  # b样条形变可能会造成边界插值误差
+            start_slice = random.randint(2, img_array.shape[0] - sample_slices - 2)
+        end_slice = start_slice + sample_slices - 1
+        img_array = img_array[start_slice:end_slice+1, :, :]
+        lbl_array = lbl_array[start_slice:end_slice+1, :, :]
 
         # 处理完毕，将array转换为tensor
         img_array = torch.FloatTensor(img_array).unsqueeze(0)
         lbl_array = torch.FloatTensor(lbl_array)
 
         return img_array, lbl_array
-
 
     def zoom(self, ct_array, seg_array, patch_size):
         length = int(256 * patch_size)
