@@ -22,7 +22,7 @@ file = open('./csv_files/prediction.csv', 'w')
 csv_writer = csv.writer(file)
 csv_writer.writerow([' ']+organs_name)
 
-model_dir = './module/net755-0.259-0.634.pth'
+model_dir = './module/net375-0.655-0.633.pth'
 
 def sample_predict(net, ct_path):
     """
@@ -102,7 +102,7 @@ def save_seg(pred_seg, info, accs):
     csv_writer.writerow([dataset+'-'+label]+accs)
 
 
-def dataset_accuracy(net, csv_path, save=False, postprocess=False):
+def dataset_accuracy(net, csv_path, save=False, postprocess=False, show=False):
     file = open(csv_path, 'r')
     lines = csv.reader(file)
     mean_acc = []
@@ -125,6 +125,9 @@ def dataset_accuracy(net, csv_path, save=False, postprocess=False):
 
         if save:
             save_seg(pred_seg, line, accs)
+        if show:
+            print("---------------- image%04d.nii" % int(line[0]))
+            print(' '.join(["%s:%s" % (i, str(j)) for i, j in zip(organs_name, accs)]))
 
         orgs_acc.append(accs)
         mean_acc.append(acc)
@@ -143,6 +146,6 @@ if __name__ == "__main__":
     net.load_state_dict(torch.load(model_dir))
     net.eval()
 
-    test_org_acc, test_mean_acc = dataset_accuracy(net, 'csv_files/test_info.csv', save=True, postprocess=True)
+    test_org_acc, test_mean_acc = dataset_accuracy(net, 'csv_files/test_info.csv', save=False, postprocess=True, show=True)
     print(' '.join(["%s:%.3f" % (i, j) for i, j in zip(organs_name, test_org_acc)]))
 

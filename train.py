@@ -7,7 +7,7 @@ from data_loader.data_loader import MyDataset
 from torch.utils.data import DataLoader
 from loss.avg_dice_loss import AvgDiceLoss
 from loss.wgt_dice_loss import WgtDiceLoss
-from loss.dyn_wgt_dice_loss import DynWgtDiceLoss
+from loss.focal_dice_loss import FocalDiceLoss
 from utils import accuracy
 from val import dataset_accuracy
 from tensorboardX import SummaryWriter
@@ -44,14 +44,15 @@ train_dl = DataLoader(train_ds, batch_size, True, num_workers=num_workers, pin_m
 
 # 损失函数
 # loss_func = AvgDiceLoss()
-loss_func = WgtDiceLoss()
+loss_func = FocalDiceLoss()
 # loss_func = DynWgtDiceLoss()
 
 # 优化器
 opt = torch.optim.Adam(net.parameters(), lr=leaing_rate, weight_decay=0.0005)
 
 # 学习率衰减
-lr_decay = torch.optim.lr_scheduler.MultiStepLR(opt, [500], gamma=0.8)
+# lr_decay = torch.optim.lr_scheduler.StepLR(opt, 500, gamma=0.8)
+lr_decay = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, 'max', factor=0.5, patience=10)
 
 # 训练
 writer = SummaryWriter()
@@ -79,7 +80,6 @@ for epoch in range(Epoch):
 
         loss.backward()
         opt.step()
-        lr_decay.step()
 
         if step % 4 == 0:
             s = 'epoch:{}, step:{}, loss:{:.3f}, accuracy:{:.3f}, time:{:.3f} min'.format(epoch, step, loss.item(), acc, (time() - start) / 60)
@@ -87,9 +87,14 @@ for epoch in range(Epoch):
 
     mean_loss = sum(mean_loss) / len(mean_loss)
     mean_acc = sum(mean_acc) / len(mean_acc)
+
+    lr_decay.step(mean_acc)  # 如果10个epoch内train acc不上升，则lr = lr * 0.5
+
     writer.add_scalar('train/loss', mean_loss, epoch)
     writer.add_scalar('train/accuracy', mean_acc, epoch)
-    writer.add_scalar('lr', lr_decay.get_lr(), epoch)
+    # writer.add_scalar('lr', lr_decay.get_lr(), epoch)  # ReduceLROnPlateau没有get_lr()方法
+    writer.add_scalar('lr', opt.param_groups[0]['lr'], epoch)
+
     orgs_accs = np.array(orgs_accs)
     org_mean_dice = [np.mean(np.array(list(set(orgs_accs[:, i]).difference(['None'])), dtype=np.float16))
                      for i in range(len(organs_name))]

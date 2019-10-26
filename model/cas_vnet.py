@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from loss.dyn_wgt_dice_loss import DynWgtDiceLoss
+from loss.focal_dice_loss import FocalDiceLoss
 
 dropout_rate = 0.3
 num_organ = 8
@@ -211,7 +211,7 @@ if __name__ == "__main__":
 
     ct = torch.randn((2, 1, 48, 256, 256)).cuda()
     seg = torch.randint(0, 9, (2, 48, 256, 256)).cuda()
-    loss_func = DynWgtDiceLoss()
+    loss_func = FocalDiceLoss()
 
     with torch.no_grad():
         out1, out2 = net(ct)
